@@ -31,8 +31,8 @@
   diff_src = layout.layer(4, 0)
   cnt_src = layout.layer(6, 0)  
   ml1_src = layout.layer(7, 0)
-  ml2_src = layout.layer(8, 0)  
-  via1_src = layout.layer(9, 0)
+  via1_src = layout.layer(8, 0)  
+  ml2_src  = layout.layer(9, 0)
     
   unless layout.layer_indices.include? 18
     puts 'conversion start'
@@ -47,14 +47,15 @@
     layout.move_layer(diff_src, diff_dst) # 4 -&gt; 3
 
     ml2_dst= layout.layer(10, 0) 
-    layout.move_layer(ml2_src, ml2_dst) # 8 -&gt; 10   
+    layout.move_layer(ml2_src, ml2_dst) # 9 -&gt; 10 
+    via1_dst = layout.layer(9, 0) 
+    layout.move_layer(via1_src, via1_dst) # 8 -&gt; 9     
     ml1_dst = layout.layer(8,0)
     layout.move_layer(ml1_src, ml1_dst) # 7 -&gt; 8
     cnt_dst = layout.layer(7, 0)
     layout.move_layer(cnt_src, cnt_dst) # 6 -&gt; 7  
 
-    via1_dst = layout.layer(9, 0) 
-    layout.move_layer(via1_src, via1_dst) # 9 -&gt; 9
+
         
     #frame_dst = layout.layer(14, 0)
     #layout.move_layer(frame_src, frame_dst)
