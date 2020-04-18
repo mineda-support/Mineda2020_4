@@ -2,11 +2,10 @@
 <technology>
  <name>Mineda2020_4</name>
  <description>PDK for Minimal Fab SOI CMOS technology</description>
- <group/>
  <dbu>0.001</dbu>
  <base-path/>
- <original-base-path>/home/anagix/.klayout/salt/Mineda2020_4/tech</original-base-path>
- <layer-properties_file>SOI_TEG.lyp</layer-properties_file>
+ <original-base-path>/home/seijirom/.klayout/salt/Mineda2020_4/tech</original-base-path>
+ <layer-properties_file>Mineda2020_4.lyp</layer-properties_file>
  <add-other-layers>true</add-other-layers>
  <reader-options>
   <gds2>
@@ -74,16 +73,6 @@
    <create-other-layers>true</create-other-layers>
    <keep-layer-names>false</keep-layer-names>
   </cif>
-  <mag>
-   <lambda>1</lambda>
-   <dbu>0.001</dbu>
-   <layer-map>layer_map()</layer-map>
-   <create-other-layers>true</create-other-layers>
-   <keep-layer-names>false</keep-layer-names>
-   <merge>true</merge>
-   <lib-paths>
-   </lib-paths>
-  </mag>
  </reader-options>
  <writer-options>
   <gds2>
@@ -111,11 +100,6 @@
    <dummy-calls>false</dummy-calls>
    <blank-separator>false</blank-separator>
   </cif>
-  <mag>
-   <lambda>0</lambda>
-   <tech/>
-   <write-timestamp>true</write-timestamp>
-  </mag>
  </writer-options>
  <connectivity>
  </connectivity>
