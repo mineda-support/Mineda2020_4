@@ -1,0 +1,678 @@
+<?xml version="1.0" encoding="utf-8"?>
+<klayout-macro>
+ <description>Mineda2020_4</description>
+ <version>0.1</version>
+ <category/>
+ <prolog/>
+ <epilog/>
+ <doc/>
+ <autorun>true</autorun>
+ <autorun-early>false</autorun-early>
+ <shortcut/>
+ <show-in-menu>false</show-in-menu>
+ <group-name/>
+ <menu-path/>
+ <interpreter>ruby</interpreter>
+ <dsl-interpreter-name/>
+ <text># coding: utf-8
+# Mineda2020_4 PCells v0.1 April 18, 2020 copy left by S. Moriyama (Anagix Corporation)
+module Mineda2020_4
+
+  include RBA
+
+  Mineda2020_4.constants.member?(:Nch) &amp;&amp; remove_const(:Nch)
+  Mineda2020_4.constants.member?(:Pch) &amp;&amp; remove_const(:Pch)
+  Mineda2020_4.constants.member?(:R_diff) &amp;&amp; remove_const(:R_diff)
+  #  Mineda2020_4.constants.member?(:HR_poly) &amp;&amp; remove_const(:HR_poly)
+  #  Mineda2020_4.constants.member?(:Capacitor) &amp;&amp; remove_const(:Capacitor)
+  Mineda2020_4.constants.member?(:PCells) &amp;&amp; remove_const(:PCells)
+  
+  class MinedaPCell &lt;PCellDeclarationHelper
+    include RBA
+    def insert_cell indices, index, x, y, vs, u1
+      #      via = instantiate via_index, x, y
+      #      inst = cell.insert(via)
+      case index
+      when :diff
+        create_box indices[:diff], x-vs/2, y-vs/2, x+vs/2, y+vs/2
+        return
+      when :via
+        create_box indices[:m1], x-vs/2, y-vs/2, x+vs/2, y+vs/2
+        create_box indices[:m2], x-vs/2, y-vs/2, x+vs/2, y+vs/2
+      when :cnt
+        create_box indices[:m1], x-vs/2, y-vs/2, x+vs/2, y+vs/2
+      when :pcont
+        create_box indices[:pol], x-vs/2, y-vs/2, x+vs/2, y+vs/2
+        create_box indices[:m1], x-vs/2, y-vs/2, x+vs/2, y+vs/2
+        index = :cnt
+      end
+      vu2 = vs/2 - u1/2
+      create_box indices[index], x-vu2, y-vu2, x+vu2, y+vu2
+    end
+    
+    def create_box index, x1, y1, x2, y2
+      cell.shapes(index).insert(Box::new(x1, y1, x2, y2))
+    end
+    
+    def create_path index, x1, y1, x2, y2, w, be, ee
+      points = [Point::new(x1, y1), Point::new(x2, y2)]
+      cell.shapes(index).insert(Path::new(points, w, be, ee))
+    end
+    
+    def create_path2 indices, index, x1, y1, x2, y2, x3, y3, w, be, ee
+      points = [Point::new(x1, y1), Point::new(x2, y2), Point::new(x3, y3)]
+      cell.shapes(indices[index]).insert(Path::new(points, w, be, ee))
+    end
+  end
+  
+  # The PCell declaration for Mineda2020_4 MOSFET
+  
+  class MOS &lt;MinedaPCell
+    
+    include RBA
+
+    def initialize
+
+      # Important: initialize the super class
+      super
+    end
+    
+    def display_text_impl
+      # Provide a descriptive text for the cell
+      "L=#{l.to_s}um,W=#{w.to_s}um"
+    end
+    
+    def coerce_parameters_impl
+      
+      # We employ coerce_parameters_impl to decide whether the handle or the 
+      # numeric parameter has changed (by comparing against the effective 
+      # radius ru) and set ru to the effective radius. We also update the 
+      # numerical value or the shape, depending on which on has not changed.
+    end
+    
+    # default implementation
+    def can_create_from_shape_impl
+      false
+    end
+    
+    def parameters_from_shape_impl
+    end
+    
+    def transformation_from_shape_impl
+      # I「Create PCell from shape（形状からPCellを作成）」プロトコルを実装します。
+      # 変形を決定するために、図形のバウンディングボックスの中心を使用します。
+      Trans.new(shape.bbox.center)
+    end
+    
+    def coerce_parameters_impl
+      set_wtot(w*n)
+    end
+    
+    def produce_impl_core
+      gw = (w/layout.dbu).to_i
+      gl = ((l+0.0.um)/layout.dbu).to_i
+      s = 8.0.um # via size (fixed)
+      vs = (s/layout.dbu).to_i
+
+      grid = 4.0.um
+      u1 = (grid/layout.dbu).to_i
+      metal1width = 4.0.um
+      m1w = (metal1width/layout.dbu).to_i
+      metal2width = 4.0.um
+      m2w = (metal2width/layout.dbu).to_i   
+      
+      #      nwl_index = layout.insert_layer(LayerInfo::new(1, 0))
+      diff_index = layout.insert_layer(LayerInfo::new(3, 0))
+      pol_index = layout.insert_layer(LayerInfo::new(5, 0))
+      m1_index = layout.insert_layer(LayerInfo::new(8, 0))
+      m2_index = layout.insert_layer(LayerInfo::new(10, 0))
+      parea_index = layout.insert_layer(LayerInfo::new(18, 0))
+      narea_index = layout.insert_layer(LayerInfo::new(19, 0))
+=begin
+         via_index = library_cell('Via', 'OpenRule1um', layout)
+         dcont_index = library_cell('dcont', 'OpenRule1um', layout)
+         pcont_index = library_cell('pcont', 'OpenRule1um', layout)
+         nsubcont_index = library_cell('nsubcont', 'OpenRule1um', layout)
+         psubcont_index = library_cell('psubcont', 'OpenRule1um', layout) 
+=end
+      via_index = layout.insert_layer(LayerInfo::new(9, 0))
+      cnt_index = layout.insert_layer(LayerInfo::new(7,0))
+      indices = {diff: diff_index, parea: parea_index, narea: narea_index,
+                 m1: m1_index, m2: m2_index, via: via_index,
+                 cnt: cnt_index}
+      offset = 0
+      prev = nil
+      (n+1).times{|i|
+        x = vs/2 + offset
+        create_path(m1_index, x, vs+u1, x, vs+u1+gw, vs, 0, 0) # s/d m1
+        create_path(cnt_index, x, vs+u1, x, vs+u1+gw, vs-u1, -u1/2, -u1/2) 
+        #        create_dcont(dcont_index, x, vs+u1, x, vs+u1+gw, vs)  
+        x = x + vs/2 + gl/2 + u1
+        if i &lt; n # gate
+          y = vs/2 + u1/4
+          y = vs/2 if l &lt;= 10.0.um
+          if i == 0
+            create_path(m1_index, x, vs/2, x, vs+u1+gw, gl, vs/2, u1/2)
+          else
+            insert_cell indices, :via, x, y, vs, u1 if i%2 != 0 || i != n-1
+            create_path(m1_index, x, vs+u1, x, vs+u1+gw, gl, vs/2, u1/2) 
+          end
+          if prev
+            if i % 2 == 0
+              create_path indices[:m1], prev-u1, y, x+gl/2, y, m1w, 0, 0
+            else
+              create_path indices[:m2], prev-u1, y, x, y, m1w, 0, 0
+            end
+          end
+          prev = x
+        end
+        offset = offset + vs + gl +2*u1  
+      }    
+      create_box diff_index, 0, vs+u1, offset -gl-vs+u1, vs+u1+gw # s/d diffusion
+      
+      x = y = vs/2
+      # insert_cell via_index, x, y, cell
+      yield indices, 0, 0, vs*2+gl, (vs+u1)*2+gw+u1/4, vs, u1, gl, m1w, m2w, l
+    end
+    
+    def library_cell name, libname, layout
+      if cell = layout.cell(name)
+        return cell.cell_index
+      else
+        lib = Library::library_by_name libname
+        cell_index = lib.layout.cell_by_name(name)
+        proxy_index = layout.add_lib_cell(lib, cell_index)
+      end
+    end
+  end
+  
+  class Nch &lt; MOS
+    include RBA
+    def initialize
+      super
+      param(:w, TypeDouble, "Nch w", :default =&gt; 14.0.um)
+      param(:l, TypeDouble, "Nch l", :default =&gt; 9.0.um)
+      param(:n, TypeInt, "Number of fingers", :default =&gt; 1)
+      param(:wtot, TypeDouble, "Total width", :default =&gt; 0, :hidden=&gt; true)
+    end
+    def display_text_impl
+      "Nch\r\n(L=#{l.to_s}um,W=#{w.to_s}um,n=#{n.to_s}, Total W=#{wtot})"
+    end 
+    def produce_impl # NMOS
+      produce_impl_core {|indices, x1, y1, x2, y2, vs, u1, gl|
+        # create pcont
+        insert_cell indices, :pcont, x1+vs/2 +3*u1/10, y2-vs/2, vs, u1
+
+        insert_cell indices, :via, x1+vs/2 +3*u1/10, y2-vs/2, vs, u1
+        create_path2 indices, :pol, x1+vs/2, y2-vs/2, x1+vs+u1/2, y2-vs/2, x1+vs+u1/2, y2-vs,u1, 0, 0
+        offset = 0
+        top = nil
+        bottom = nil
+        prev_pol = nil
+
+        (n+1).times{|i|
+          x = offset + vs/2
+          y = y2+u1-vs-u1/2
+          create_path indices[:pol], prev_pol-vs/2-gl, y , x-vs/2, y, u1, 0, 0 if prev_pol
+          prev_pol = x if i &gt;= 1
+          if i % 2 == 0
+            # first s/d and via
+            insert_cell indices, :via, x, y1+vs/2, vs, u1
+            create_path indices[:m1], x, y1+vs/2, x, y1+vs+2*u1, u1, 0, 0
+            if top
+              create_path indices[:m1], top, y1+vs/2, x, y1+vs/2, u1, 0, 0
+            end
+            top = x
+          else
+            # second s/d and via
+            if n == 1
+              insert_cell indices, :via, x+3*u1/10, y2-vs/2, vs, u1
+            else
+              insert_cell indices, :via, x+3*u1/10, y2+u1-vs/2, vs, u1
+            end
+            create_path indices[:m1], x, y2-vs-u1, x, y2+u1-vs/2, u1, 0, 0
+            if bottom
+              create_path indices[:m1], bottom, y2+u1-vs/2, x, y2+u1-vs/2, u1, 0, 0
+            end
+            bottom = x
+          end
+          offset = offset + vs + gl
+        }
+        # psubcont and via
+        if n % 2 == 0
+          y = y2-vs/2
+        else
+          y = y1+vs/2
+        end
+        # insert_cell indices[:psubcont], offset -vs/2-gl+u1/2, y
+        # insert_cell indices, :via, offset-vs/2-gl+u1/2, y 
+        create_box indices[:narea], x1-u1, y1+vs+u1/2, offset-gl+u1, y2-vs-u1/2
+      }
+    end
+  end
+  
+  class Pch &lt; MOS
+    include RBA
+    def initialize
+      super
+      param(:w, TypeDouble, "Pch w", :default =&gt; 38.0.um)
+      param(:l, TypeDouble, "Pch l", :default =&gt; 8.0.um)
+      param(:n, TypeInt, "Number of fingers", :default =&gt; 1)
+      param(:wtot, TypeDouble, "Total width", :default =&gt; 0, :hidden=&gt; true)
+    end 
+    
+    def display_text_impl
+      "Pch\r\n(L=#{l.to_s}um,W=#{w.to_s}um,n=#{n.to_s}, Total W=#{wtot})"
+    end  
+    
+    def produce_impl # PMOS
+      produce_impl_core {|indices, x1, y1, x2, y2, vs, u1, gl, m1w, m2w, l|
+        y = y1+vs/2
+        if n == 1
+          x = x1+vs/2+u1*2
+        else
+          x = x1+vs/2+gl+u1
+          y = y + u1/4 if l &gt; 10.0.um
+        end
+        insert_cell indices, :via, x, y, vs, u1
+        offset = 0
+        top = nil
+        bottom = nil
+        prev_pol = nil
+        (n+1).times{|i|
+          x = offset  + vs/2
+          prev_pol = x  if i &gt;=1   
+          if i % 2 == 0
+            # first s/d and via
+            insert_cell indices, :via, x, y2-vs/2, vs, u1
+            create_path indices[:m1], x, y2-vs-u1, x, y2-vs/2, m1w, m1w/2, m1w/2 if prev_pol
+            if top
+              create_path indices[:m1], top, y2-vs/2, x, y2-vs/2, m1w, m1w/2, m1w/2
+            end
+            top = x
+          else
+            # second s/d and via
+            if n == 1
+              y = y1+vs/2
+            else
+              y = y1+vs/2-m2w-u1*2 - u1/2-u1/4
+              y = y - u1/2-u1/4 if l &lt;= 10.0.um
+            end
+            insert_cell indices, :via, x, y, vs, u1 if i &gt;= n-1
+            create_path indices[:m1], x, y+u1, x, y1+u1+m2w, m1w, m1w/2, m1w/2
+            if bottom
+              create_path indices[:m1], bottom, y, x, y, m1w, m1w/2, m1w/2
+            end
+            bottom = x
+          end
+          offset = offset + vs + gl + 2*u1
+        }
+        # nsubcont and via
+        if n % 2 == 0
+          y = y1 + vs/2
+        else
+          y = y2 - vs/2
+        end
+        x = offset - vs -gl + u1/2
+        insert_cell indices, :cnt, x, y, vs, u1
+        insert_cell indices, :via, x, y, vs, u1
+        insert_cell indices, :diff, x, y, vs, u1
+        
+        create_box indices[:parea], x1-u1/2, y1+vs+u1/2, offset-gl -vs +u1+u1/2, y2-vs-u1/2
+      }
+    end
+  end    # PCellを配置するライブラリ 
+  
+  class Resistor &lt; MinedaPCell
+    def initialize
+
+      # Important: initialize the super class
+      super
+    end
+    
+    # default implementation
+    def can_create_from_shape_impl
+      false
+    end
+    
+    def parameters_from_shape_impl
+    end
+    
+    def transformation_from_shape_impl
+      # I「Create PCell from shape（形状からPCellを作成）」プロトコルを実装します。
+      # 変形を決定するために、図形のバウンディングボックスの中心を使用します。
+      Trans.new(shape.bbox.center)
+    end
+
+    def produce_impl
+     # pol_index = layout.insert_layer(LayerInfo::new(5, 0))
+      diff_index = layout.insert_layer(LayerInfo::new(3, 0))
+      cnt_index = layout.insert_layer(LayerInfo::new(7,0))
+      m1_index = layout.insert_layer(LayerInfo::new(8, 0))
+      m2_index = layout.insert_layer(LayerInfo::new(10, 0))
+      res_index = layout.insert_layer(LayerInfo::new(15, 0))
+      via_index = layout.insert_layer(LayerInfo::new(9, 0))
+      indices = {diff: diff_index, m1: m1_index, m2: m2_index, 
+                 via: via_index, cnt: cnt_index, res: res_index}
+      if ho
+        produce_impl_core(1, indices)
+      else
+        produce_impl_core(0, indices)
+      end
+    end 
+     
+    def produce_impl_core(header_outside, indices)
+      rw = (w/layout.dbu).to_i
+      rrl = (l/layout.dbu).to_i
+      via_size = 12.0.um # via size (fixed)
+      vs = (via_size/layout.dbu).to_i
+      sp = (s/layout.dbu).to_i
+      ms = (m/layout.dbu).to_i
+      grid = 4.0.um
+      u1 = (grid/layout.dbu).to_i
+      metal1width = 10.0.um
+      m1w = (metal1width/layout.dbu).to_i
+      rw_ho = rw*header_outside
+      rl = rrl - (sp+rw)*(n-1) -rw_ho
+      sl = [(rl/n/u1).to_i*u1, ms-2*rw].min
+      if sl*n + (sp+rw)*(n-1) == rrl
+        r = 0
+      else
+        sl = [sl + u1, ms-2*rw].min
+        r = rrl - sl*(n-1) - (sp+rw)*(n-1)
+        if r &lt;= 0 &amp;&amp; sl &gt; ms-2*rw
+          rl = rrl - sp*(n-2)
+          set_n n - 1
+        end
+      end
+      puts "rrl = #{rrl}, rl = #{rl}, n = #{n}, sp=#{sp}, sl = #{sl}, r = #{r}"
+      prev_x = nil
+      for i in 0..n-1
+        offset = vs/2 + (sp+rw)*i
+        r = sl
+        if i == n - 1 # rl - sl*(i+1) &lt; 0
+          r = rl - sl*i
+        end
+        puts "offset=#{offset}, r=#{r} for i=#{i}"
+        if i % 2 == 0
+          x = offset
+          points = [Point::new(x, vs-rw_ho), Point::new(x, vs+r)]
+          cell.shapes(indices[:res]).insert(Path::new(points, rw, 0, 0))    
+          if i == 0 
+            points = [Point::new(x, -rw_ho), Point::new(x, vs+r)]
+            y = vs/2-rw_ho
+            insert_cell indices, :via, x, y, vs, u1
+            insert_cell indices, :cnt, x, y, vs, u1
+            insert_cell indices, :diff, x, y, vs, u1
+          end
+          if i == n-1
+            #points = [Point::new(x, vs), Point::new(x, vs+r+vs)]
+            points = [Point::new(x, vs), Point::new(x, vs+r+vs)]
+            y =  vs+r+vs/2
+            insert_cell indices, :via, x, y, vs, u1
+            insert_cell indices, :cnt, x, y, vs, u1
+            insert_cell indices, :diff, x, y, vs, u1
+          end
+          cell.shapes(indices[:diff]).insert(Path::new(points, rw, 0, 0))
+       
+          if prev_x
+            y = vs - rw/2
+            points = [Point::new(x, y), Point::new(prev_x, y)]
+            cell.shapes(indices[:diff]).insert(Path::new(points, rw, rw/2, rw/2))
+            cell.shapes(indices[:res]).insert(Path::new(points, rw, rw/2, rw/2))
+          end  
+        else
+          points = [Point::new(offset, vs+(sl-r)), Point::new(offset, vs+sl)]
+          cell.shapes(indices[:res]).insert(Path::new(points, rw, 0, 0))
+          if i == n-1
+            points = [Point::new(offset, sl-r), Point::new(offset, vs+sl)]
+            x = offset
+            y = vs+sl-r-vs/2
+            insert_cell indices, :via, x, y, vs, u1
+            insert_cell indices, :cnt, x, y, vs, u1
+            insert_cell indices, :diff, x, y, vs, u1
+          end
+          cell.shapes(indices[:diff]).insert(Path::new(points, rw, 0, 0))
+
+          if prev_x
+            x = offset
+            y = vs + sl + rw/2
+            points = [Point::new(x, y), Point::new(prev_x, y)]
+            cell.shapes(indices[:diff]).insert(Path::new(points, rw, rw/2, rw/2))
+            cell.shapes(indices[:res]).insert(Path::new(points, rw, rw/2, rw/2))
+          end
+        end
+        prev_x = offset  
+      end
+    end
+
+=begin       
+       def insert_via_pcont via_index, pcont_index, x, y, rw, vs
+         nv = (rw/vs).to_i
+         #if nv*vs != rw
+         #  nv = nv + 1
+         #end
+         offset = x - (vs*nv - vs)/2
+         for i in 0..nv-1
+           x = offset + i*vs
+           via = instantiate via_index, x, y, cell
+           inst = cell.insert(via)
+           pcont = instantiate pcont_index, x, y, cell
+           inst = cell.insert(pcont)
+         end
+       end
+       
+    def instantiate index, x, y, cell
+      CellInstArray.new(index, Trans.new(x, y))
+    end
+=end
+  end
+
+  class R_diff &lt; Resistor
+    include RBA
+    def initialize
+      super
+      param(:l, TypeDouble, "Resistor length", :default =&gt; 40.0.um)
+      param(:w, TypeDouble, "Resistor width", :default =&gt; 10.0.um)
+      param(:n, TypeInt, "Number of maximum stripes", :default =&gt; 1)
+      param(:s, TypeDouble, "Space between stripes", :default =&gt; 4.0.um)
+      param(:m, TypeDouble, "Maximum stripe length", :default =&gt; 1000.0.um)
+      param(:ho, TypeBoolean, "Headers outside?", :default =&gt; false)
+      param(:rval, TypeDouble, "Resistor value", :default =&gt; 0, :hidden=&gt; true)
+    end
+    def display_text_impl
+      if n &gt; 1
+        "R_diff\r\n(L=#{l.to_s}um,W=#{w.to_s}um,n=#{n.to_s},s=#{s}um =&gt; R=#{rval})"
+      else
+        "R_diff\r\n(L=#{l.to_s}um,W=#{w.to_s}um,n=#{n.to_s} =&gt; R=#{rval})"
+      end
+    end       
+    def coerce_parameters_impl
+=begin
+         if n == 1
+           l &lt; 20.0 &amp;&amp; set_l(20.0)
+           l &gt; 80.0 &amp;&amp; set_l(80.0) 
+         else      
+           l/n &lt; 20.0 &amp;&amp; set_n(n-1)
+           l/n &gt; 80.0 &amp;&amp; set_n(n+1)
+         end
+=end
+      sheet_resistance = 700.0
+      set_rval(sheet_resistance * l / w)
+    end
+  end
+=begin     
+     class Capacitor &lt; PCellDeclarationHelper
+       
+       include RBA
+
+       def initialize
+
+         # Important: initialize the super class
+         super
+         param(:l, TypeDouble, "Capacitor length", :default =&gt; 100.0.um)
+         param(:w, TypeDouble, "Capacitor width", :default =&gt; 100.0.um)
+
+         param(:cval, TypeDouble, "Capacitor value", :default =&gt; 0, :hidden=&gt; true)
+       end
+       
+       def display_text_impl
+         # Provide a descriptive text for the cell
+         "Capacitor\r\n(L=#{l.to_s}um,W=#{w.to_s}um,C=#{cval})"
+       end
+       
+       def coerce_parameters_impl
+         
+         # We employ coerce_parameters_impl to decide whether the handle or the 
+         # numeric parameter has changed (by comparing against the effective 
+         # radius ru) and set ru to the effective radius. We also update the 
+         # numerical value or the shape, depending on which on has not changed.
+         area_cap = 2.6e-15
+         set_cval(area_cap * l * w)
+       end
+       
+       # default implementation
+       def can_create_from_shape_impl
+         false
+       end
+       
+       def transformation_from_shape_impl
+         # I「Create PCell from shape（形状からPCellを作成）」プロトコルを実装します。
+         # 変形を決定するために、図形のバウンディングボックスの中心を使用します。
+         Trans.new(shape.bbox.center)
+       end
+       
+       def produce_impl
+         cw = (w/layout.dbu).to_i
+         cl = (l/layout.dbu).to_i
+
+         grid = 1.0.um
+         u1 = (grid/layout.dbu).to_i
+         s = 2.0.um # via size (fixed)
+         vs = (s/layout.dbu).to_i
+         
+         nwl_index = layout.insert_layer(LayerInfo::new(1, 0))
+         diff_index = layout.insert_layer(LayerInfo::new(3, 0))     
+         pol_index = layout.insert_layer(LayerInfo::new(5, 0))
+         m1_index = layout.insert_layer(LayerInfo::new(8, 0))
+         m2_index = layout.insert_layer(LayerInfo::new(10, 0))
+         cap_index = layout.insert_layer(LayerInfo::new(16, 0))
+         parea_index = layout.insert_layer(LayerInfo::new(18, 0))
+         via_index = library_cell('Via', 'OpenRule1um', layout)
+         pcont_index = library_cell('pcont', 'OpenRule1um', layout)
+         dcont_index = library_cell('dcont', 'OpenRule1um', layout)
+         nsubcont_index = library_cell('nsubcont', 'OpenRule1um', layout)
+         create_box pol_index, 0, 0, u1+vs+u1 + cw, cl
+         create_box diff_index, u1+vs+u1, -u1, u1+vs+u1+ cw+u1, cl+u1+vs+u1
+         create_box parea_index, u1+vs, -2*u1, u1+vs+u1+ cw+2*u1, cl+u1+vs+2*u1
+         create_box nwl_index, -4*u1, -4*u1,  u1+vs+u1+cw + 4*u1, cl + 2*vs +4*u1
+         create_box cap_index, -4*u1, -4*u1,  u1+vs+u1+cw + 4*u1, cl + 2*vs +4*u1
+         create_contacts_vertically pcont_index, u1+vs/2, 0, u1+vs/2, cl, vs
+         create_contacts_horizontally dcont_index, u1+vs+u1,  cl + u1+vs/2, u1+vs+u1+ cw, cl + u1+vs/2, vs
+         insert_cell nsubcont_index, 0, cl+2*u1+vs
+
+         #          points = [Point::new(offset, vs), Point::new(offset, vs/2+r)]
+         #          cell.shapes(pol_index).insert(Path::new(points, rw, vs, vs))
+         #          cell.shapes(res_index).insert(Path::new(points, rw, vs/4, vs/4))
+       end
+       
+       def create_contacts_horizontally index, x1, y1, x2, y2, vs
+         (x1+vs/2..x2-vs/2).step(vs){|x|
+           insert_cell index, x, y1
+         }
+       end
+       
+       def create_contacts_vertically index, x1, y1, x2, y2, vs
+         (y1+vs/2..y2-vs/2).step(vs){|y|
+           insert_cell index, x1, y
+         }
+       end
+       
+       def create_box index, x1, y1, x2, y2
+         cell.shapes(index).insert(Box::new(x1, y1, x2, y2))
+       end
+       
+       def library_cell name, libname, layout
+         if cell = layout.cell(name)
+           return cell.cell_index
+         else
+           lib = Library::library_by_name libname
+           cell_index = lib.layout.cell_by_name(name)
+           proxy_index = layout.add_lib_cell(lib, cell_index)
+         end
+       end
+       
+       def insert_cell via_index, x, y
+         via = instantiate via_index, x, y
+         inst = cell.insert(via)
+       end
+       
+       def instantiate index, x, y
+         CellInstArray.new(index, Trans.new(x, y))
+       end
+     end
+     
+     class CPIP &lt; Capacitor
+       def display_text_impl
+         # Provide a descriptive text for the cell
+         "PIP Capacitor\r\n(L=#{l.to_s}um,W=#{w.to_s}um,C=#{cval})"
+       end
+       
+       def coerce_parameters_impl
+         area_cap = 1.72e-15
+         set_cval(area_cap * l * w)
+       end
+       
+       def produce_impl
+         cw = (w/layout.dbu).to_i
+         cl = (l/layout.dbu).to_i
+
+         grid = 1.0.um
+         u1 = (grid/layout.dbu).to_i
+         s = 2.0.um # via size (fixed)
+         vs = (s/layout.dbu).to_i
+         
+         pol_index = layout.insert_layer(LayerInfo::new(5, 0))
+         cap_index = layout.insert_layer(LayerInfo::new(16, 0))
+         via_index = library_cell('Via', 'OpenRule1um', layout)
+         pcont_index = library_cell('pcont', 'OpenRule1um', layout)
+         create_box pol_index, 0, 0, u1+vs+u1 + cw, cl
+         create_box cap_index, u1+vs+u1, -u1, u1+vs+u1+ cw+u1, cl+u1+vs+u1
+         create_contacts_vertically pcont_index, u1+vs/2, 0, u1+vs/2, cl, vs
+         create_contacts_vertically via_index, u1+vs/2, 0, u1+vs/2, cl, vs
+         create_contacts_horizontally pcont_index, u1+vs+u1,  cl + u1+vs/2, u1+vs+u1+ cw, cl + u1+vs/2, vs
+         create_contacts_horizontally via_index, u1+vs+u1,  cl + u1+vs/2, u1+vs+u1+ cw, cl + u1+vs/2, vs
+
+         #          points = [Point::new(offset, vs), Point::new(offset, vs/2+r)]
+         #          cell.shapes(pol_index).insert(Path::new(points, rw, vs, vs))
+         #          cell.shapes(res_index).insert(Path::new(points, rw, vs/4, vs/4))
+       end
+=end
+     
+     class Mineda2020_4 &lt; Library
+       
+       def initialize  
+         
+         # 説明を設定
+         self.description = "PCells"
+         
+         # PCell宣言を作成する
+         # layout.register_pcell("Resistor", Resistor::new)
+         layout.register_pcell("Nch", Nch::new)
+         layout.register_pcell("Pch", Pch::new)
+         layout.register_pcell("R_diff", R_diff::new)
+         #      layout.register_pcell("HR_poly", HR_poly::new)
+         #      layout.register_pcell("Capacitor", Capacitor::new)
+         #      layout.register_pcell("CPIP", CPIP::new)
+
+         # "Mineda2020_4"という名前で登録します。
+         # その名前のライブラリがすでに存在していた場合は、その時点で置き換えられます。
+         register("PCells_Mineda2020_4")
+       end
+     end
+
+     # ライブラリをインスタンス化して登録する
+     Mineda2020_4::new
+   end
+</text>
+</klayout-macro>
