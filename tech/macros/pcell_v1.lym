@@ -53,6 +53,12 @@ module Mineda2020_4
     def create_box index, x1, y1, x2, y2
       cell.shapes(index).insert(Box::new(x1, y1, x2, y2))
     end
+
+    def create_dcont indices, x1, y1, x2, y2, vs,u1
+      (y1+vs/2..y2-vs/2).step(vs){|y|
+        insert_cell indices, :cnt, x1, y, vs, u1
+      }
+    end    
     
     def create_path index, x1, y1, x2, y2, w, be, ee
       points = [Point::new(x1, y1), Point::new(x2, y2)]
@@ -144,11 +150,11 @@ module Mineda2020_4
       (n+1).times{|i|
         x = vs/2 + offset
         create_path(m1_index, x, vs+u1, x, vs+u1+gw, vs, 0, 0)
-        # create_dcont(cnt_index, x, vs+u1, x, vs+u1+gw, vs)  
-        create_path(cnt_index, x, vs+u1, x, vs+u1+gw, vs-u1, -u1/2, -u1/2)
+        create_dcont(indices, x, vs+u1, x, vs+u1+gw, vs, u1) 
+        # create_path(cnt_index, x, vs+u1, x, vs+u1+gw, vs-u1, -u1/2, -u1/2)
 
         x = x + vs/2 + gl/2
-        create_path(pol_index, x, vs+u1, x, vs+u1+gw, gl, vs/2, vs/2) if i &lt; n
+        create_path(pol_index, x, vs+u1, x, vs+u1+gw-u1/2, gl, vs/2, vs/2) if i &lt; n
         offset = offset + vs + gl
       }    
       create_box diff_index, -u1/4, vs+u1-u1/4, offset -gl +u1/4, vs+u1+gw+u1/4 # s/d diffusion
