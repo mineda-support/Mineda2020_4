@@ -150,7 +150,11 @@ module Mineda2020_4
       (n+1).times{|i|
         x = vs/2 + offset
         create_path(m1_index, x, vs+u1, x, vs+u1+gw, vs, 0, 0)
-        create_dcont(indices, x, vs+u1, x, vs+u1+gw, vs, u1) 
+        if sq_dcont
+          create_dcont(indices, x, vs+u1, x, vs+u1+gw, vs, u1) 
+        else
+          create_path(cnt_index, x, vs+u1, x, vs+u1+gw, vs-u1, -u1/2, -u1/2)
+        end
         # create_path(cnt_index, x, vs+u1, x, vs+u1+gw, vs-u1, -u1/2, -u1/2)
 
         x = x + vs/2 + gl/2
@@ -183,6 +187,7 @@ module Mineda2020_4
       param(:l, TypeDouble, "Nch l", :default =&gt; 9.0.um)
       param(:n, TypeInt, "Number of fingers", :default =&gt; 1)
       param(:wtot, TypeDouble, "Total width", :default =&gt; 0, :hidden=&gt; true)
+      param(:sq_dcont, TypeBoolean, "Fized size square dcont?", :default =&gt; true)
     end
     def display_text_impl
       "Nch\r\n(L=#{l.to_s}um,W=#{w.to_s}um,n=#{n.to_s}, Total W=#{wtot})"
@@ -248,6 +253,7 @@ module Mineda2020_4
       param(:l, TypeDouble, "Pch l", :default =&gt; 8.0.um)
       param(:n, TypeInt, "Number of fingers", :default =&gt; 1)
       param(:wtot, TypeDouble, "Total width", :default =&gt; 0, :hidden=&gt; true)
+      param(:sq_dcont, TypeBoolean, "Fized size square dcont?", :default =&gt; true)      
     end 
     
     def display_text_impl
