@@ -15,7 +15,7 @@
  <interpreter>ruby</interpreter>
  <dsl-interpreter-name/>
  <text># coding: utf-8
-# Mineda2020_4 PCells v0.2 April 21, 2020 copy left by S. Moriyama (Anagix Corporation)
+# Mineda2020_4 PCells v0.4 April 21, 2020 copy left by S. Moriyama (Anagix Corporation)
 module Mineda2020_4
 
   include RBA
@@ -215,20 +215,22 @@ module Mineda2020_4
           prev_tin = x if i &gt;= 1
           if i % 2 == 0
             # first s/d and via
-            insert_cell indices, :via, x, y1+vs/2, vs, u1
-            create_path indices[:m1], x, y1+vs/2, x, y1+vs+2*u1, u1, 0, 0
+            insert_cell indices, :via, x, y1+vs/2, vs, u1 if i == 0             
+            create_path indices[:m1], x, y1+vs/2, x, y1+vs+2*u1, u1, vs/4, 0
             if top
               create_path indices[:m1], top, y1+vs/2, x, y1+vs/2, u1, 0, 0
             end
             top = x
           else
             # second s/d and via
-            if n == 1
-              insert_cell indices, :via, x, y2-vs/2, vs, u1
-            else
-              insert_cell indices, :via, x, y2+u1-vs/2, vs, u1
+            if i &gt;= n-1
+              if n == 1
+                insert_cell indices, :via, x, y2-vs/2, vs, u1
+              else
+                insert_cell indices, :via, x, y2+u1-vs/2, vs, u1
+              end
             end
-            create_path indices[:m1], x, y2-vs-u1, x, y2+u1-vs/2, u1, 0, 0
+            create_path indices[:m1], x, y2-vs-u1, x, y2+u1-vs/2, u1, 0, vs/4
             if bottom
               create_path indices[:m1], bottom, y2+u1-vs/2, x, y2+u1-vs/2, u1, 0, 0
             end
@@ -282,26 +284,24 @@ module Mineda2020_4
           prev_tin = x  if i &gt;=1   
           if i % 2 == 0
             # first s/d and via
-            insert_cell indices, :via, x, y2-vs/2, vs, u1
-            create_path indices[:m1], x, y2-vs-u1, x, y2-vs/2, u1, 0, 0
+            insert_cell indices, :via, x, y2-vs/2, vs, u1 if i == 0
+            create_path indices[:m1], x, y2-vs-u1, x, y2-vs/2, u1, 0, vs/4
             if top
               create_path indices[:m1], top, y2-vs/2, x, y2-vs/2, u1, 0, 0
             end
             top = x
           else
             # second s/d and via
-            if i == 1
+            if i &gt;= n-1
               if n == 1
                 insert_cell indices, :via, x, y1+vs/2, vs, u1
               else
                 insert_cell indices, :via, x, y1-u1+vs/2, vs, u1
               end
-            else
-              insert_cell indices, :via, x, y1-u1+vs/2, vs, u1
             end
             create_path indices[:m1], x, y1-u1+vs/2, x, y1+vs+u1, u1, 0, 0
             if bottom
-              create_path indices[:m1], bottom, y1-u1+vs/2, x, y1 -u1+vs/2, u1, 0, 0
+              create_path indices[:m1], bottom, y1-u1+vs/2, x, y1 -u1+vs/2, u1, vs/4, 0
             end
             bottom = x
           end
