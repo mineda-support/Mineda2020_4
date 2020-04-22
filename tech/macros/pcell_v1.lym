@@ -15,7 +15,7 @@
  <interpreter>ruby</interpreter>
  <dsl-interpreter-name/>
  <text># coding: utf-8
-# Mineda2020_4 PCells v0.4 April 21, 2020 copy left by S. Moriyama (Anagix Corporation)
+# Mineda2020_4 PCells v0.41 April 22, 2020 copy left by S. Moriyama (Anagix Corporation)
 module Mineda2020_4
 
   include RBA
@@ -229,8 +229,10 @@ module Mineda2020_4
               else
                 insert_cell indices, :via, x, y2+u1-vs/2, vs, u1
               end
+                create_path indices[:m1], x, y2-vs-u1, x, y2+u1-vs, u1, 0, vs/4
+            else
+              create_path indices[:m1], x, y2-vs-u1, x, y2+u1-vs/2, u1, 0, vs/4
             end
-            create_path indices[:m1], x, y2-vs-u1, x, y2+u1-vs/2, u1, 0, vs/4
             if bottom
               create_path indices[:m1], bottom, y2+u1-vs/2, x, y2+u1-vs/2, u1, 0, 0
             end
