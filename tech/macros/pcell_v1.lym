@@ -15,14 +15,15 @@
  <interpreter>ruby</interpreter>
  <dsl-interpreter-name/>
  <text># coding: utf-8
-# Mineda2020_4 PCells v0.41 April 22, 2020 copy left by S. Moriyama (Anagix Corporation)
+# Mineda2020_4 PCells v0.5 April 30, 2020 copy left by S. Moriyama (Anagix Corporation)
 module Mineda2020_4
 
   include RBA
 
   Mineda2020_4.constants.member?(:Nch) &amp;&amp; remove_const(:Nch)
   Mineda2020_4.constants.member?(:Pch) &amp;&amp; remove_const(:Pch)
-  Mineda2020_4.constants.member?(:R_diff) &amp;&amp; remove_const(:R_diff)
+  Mineda2020_4.constants.member?(:R_ndiff) &amp;&amp; remove_const(:R_ndiff)
+  Mineda2020_4.constants.member?(:R_pdiff) &amp;&amp; remove_const(:R_pdiff)
   #  Mineda2020_4.constants.member?(:HR_poly) &amp;&amp; remove_const(:HR_poly)
   #  Mineda2020_4.constants.member?(:Capacitor) &amp;&amp; remove_const(:Capacitor)
   Mineda2020_4.constants.member?(:PCells) &amp;&amp; remove_const(:PCells)
@@ -57,9 +58,16 @@ module Mineda2020_4
     def create_dcont indices, x1, y1, x2, y2, vs,u1
       lf = y2 - y1  
       nf = (lf/vs).to_i
-      vstep = vs
-      vstep = lf/nf unless nf*vs == lf
-      (y1+vstep/2 .. y2-vstep/2).step(vstep){|y|
+      if nf*vs == lf
+        vstep = vs
+        residual = 0
+      else
+        u2 = u1/4
+        vstep = lf/nf
+        vstep = (vstep/u2).to_i*u2 # u2 is a minimum grid = 0.5um
+        residual = lf - nf*vstep
+      end
+      (y1+vstep/2+residual/2 .. y2-vstep/2).step(vstep){|y|
         insert_cell indices, :cnt, x1, y, vs, u1
       }
     end    
@@ -363,13 +371,16 @@ module Mineda2020_4
       m2_index = layout.insert_layer(LayerInfo::new(10, 0))
       res_index = layout.insert_layer(LayerInfo::new(15, 0))
       via_index = layout.insert_layer(LayerInfo::new(9, 0))
-      indices = {diff: diff_index, m1: m1_index, m2: m2_index, 
-                 via: via_index, cnt: cnt_index, res: res_index}
+      narea_index = layout.insert_layer(LayerInfo::new(19, 0))
+      parea_index = layout.insert_layer(LayerInfo::new(18, 0))
+      indices = {diff: diff_index, m1: m1_index, m2: m2_index, via: via_index,
+                 cnt: cnt_index, res: res_index, narea: narea_index, parea: parea_index}
       if ho
-        produce_impl_core(1, indices)
+        rectangle, u1 = produce_impl_core(1, indices)
       else
-        produce_impl_core(0, indices)
+        rectangle, u1 = produce_impl_core(0, indices)
       end
+      [indices, rectangle, u1]
     end 
      
     def produce_impl_core(header_outside, indices)
@@ -398,6 +409,7 @@ module Mineda2020_4
       end
       puts "rrl = #{rrl}, rl = #{rl}, n = #{n}, sp=#{sp}, sl = #{sl}, r = #{r}"
       prev_x = nil
+      xmax = ymax = -10000000
       for i in 0..n-1
         offset = vs/2 + (sp+rw)*i
         r = sl
@@ -423,6 +435,7 @@ module Mineda2020_4
             insert_cell indices, :via, x, y, vs, u1
             insert_cell indices, :cnt, x, y, vs, u1
             insert_cell indices, :diff, x, y, vs, u1
+            ymax = [y+vs/2, ymax].max
           end
           cell.shapes(indices[:diff]).insert(Path::new(points, rw, 0, 0))
        
@@ -431,6 +444,7 @@ module Mineda2020_4
             points = [Point::new(x, y), Point::new(prev_x, y)]
             cell.shapes(indices[:diff]).insert(Path::new(points, rw, rw/2, rw/2))
             cell.shapes(indices[:res]).insert(Path::new(points, rw, rw/2, rw/2))
+            ymax = [y+rw/2, ymax].max 
           end  
         else
           points = [Point::new(offset, vs+(sl-r)), Point::new(offset, vs+sl)]
@@ -442,6 +456,7 @@ module Mineda2020_4
             insert_cell indices, :via, x, y, vs, u1
             insert_cell indices, :cnt, x, y, vs, u1
             insert_cell indices, :diff, x, y, vs, u1
+            ymax = [y+vs/2, ymax].max
           end
           cell.shapes(indices[:diff]).insert(Path::new(points, rw, 0, 0))
 
@@ -451,10 +466,14 @@ module Mineda2020_4
             points = [Point::new(x, y), Point::new(prev_x, y)]
             cell.shapes(indices[:diff]).insert(Path::new(points, rw, rw/2, rw/2))
             cell.shapes(indices[:res]).insert(Path::new(points, rw, rw/2, rw/2))
+            ymax = [y+rw/2, ymax].max 
           end
         end
-        prev_x = offset  
+        prev_x = offset 
+        xmax = [x + vs/2, xmax].max
+        puts "[x,y] = #{[xmax,ymax].inspect}"
       end
+       [[0, 0, xmax, ymax], u1]
     end
 
 =begin       
@@ -498,20 +517,30 @@ module Mineda2020_4
         "R_diff\r\n(L=#{l.to_s}um,W=#{w.to_s}um,n=#{n.to_s} =&gt; R=#{rval})"
       end
     end       
+  end
+  class R_ndiff &lt; R_diff
+    def produce_impl
+      indices, rectangle, u1 = super
+      x1, y1, x2, y2 = rectangle
+      create_box indices[:narea], x1-u1/4, y1-u1/4, x2+u1/4, y2+u1/4
+    end
     def coerce_parameters_impl
-=begin
-         if n == 1
-           l &lt; 20.0 &amp;&amp; set_l(20.0)
-           l &gt; 80.0 &amp;&amp; set_l(80.0) 
-         else      
-           l/n &lt; 20.0 &amp;&amp; set_n(n-1)
-           l/n &gt; 80.0 &amp;&amp; set_n(n+1)
-         end
-=end
-      sheet_resistance = 700.0
+      sheet_resistance = 180
       set_rval(sheet_resistance * l / w)
     end
   end
+  class R_pdiff &lt; R_diff
+    def produce_impl
+      indices, rectangle, u1 = super
+      x1, y1, x2, y2 = rectangle
+      create_box indices[:parea], x1-u1/4, y1-u1/4, x2+u1/4, y2+u1/4
+    end
+    def coerce_parameters_impl
+      sheet_resistance = 1520
+      set_rval(sheet_resistance * l / w)
+    end
+  end
+
 =begin     
      class Capacitor &lt; PCellDeclarationHelper
        
@@ -660,6 +689,8 @@ module Mineda2020_4
        end
 =end
      
+
+
      class Mineda2020_4 &lt; Library
        
        def initialize  
@@ -671,7 +702,8 @@ module Mineda2020_4
          # layout.register_pcell("Resistor", Resistor::new)
          layout.register_pcell("Nch", Nch::new)
          layout.register_pcell("Pch", Pch::new)
-         layout.register_pcell("R_diff", R_diff::new)
+         layout.register_pcell("R_ndiff", R_ndiff::new)
+         layout.register_pcell("R_pdiff", R_pdiff::new)
          #      layout.register_pcell("HR_poly", HR_poly::new)
          #      layout.register_pcell("Capacitor", Capacitor::new)
          #      layout.register_pcell("CPIP", CPIP::new)
