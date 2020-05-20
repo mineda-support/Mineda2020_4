@@ -15,7 +15,7 @@
  <interpreter>ruby</interpreter>
  <dsl-interpreter-name/>
  <text># coding: utf-8
-# Mineda2020_4 PCells v0.5 April 30, 2020 copy left by S. Moriyama (Anagix Corporation)
+# Mineda2020_4 PCells v0.6 May 19, 2020 copy left by S. Moriyama (Anagix Corporation)
 module Mineda2020_4
 
   include RBA
@@ -127,7 +127,7 @@ module Mineda2020_4
     end
     
     def produce_impl_core
-      gw = (w/layout.dbu).to_i
+      gw = ((w-2.0.um)/layout.dbu).to_i
       gl = ((l+0.0.um)/layout.dbu).to_i
       s = 8.0.um # via size (fixed)
       vs = (s/layout.dbu).to_i
@@ -195,7 +195,7 @@ module Mineda2020_4
     include RBA
     def initialize
       super
-      param(:w, TypeDouble, "Nch w", :default =&gt; 14.0.um)
+      param(:w, TypeDouble, "Nch w", :default =&gt; 18.0.um)
       param(:l, TypeDouble, "Nch l", :default =&gt; 9.0.um)
       param(:n, TypeInt, "Number of fingers", :default =&gt; 1)
       param(:wtot, TypeDouble, "Total width", :default =&gt; 0, :hidden=&gt; true)
@@ -267,7 +267,7 @@ module Mineda2020_4
     include RBA
     def initialize
       super
-      param(:w, TypeDouble, "Pch w", :default =&gt; 38.0.um)
+      param(:w, TypeDouble, "Pch w", :default =&gt; 42.0.um)
       param(:l, TypeDouble, "Pch l", :default =&gt; 8.0.um)
       param(:n, TypeInt, "Number of fingers", :default =&gt; 1)
       param(:wtot, TypeDouble, "Total width", :default =&gt; 0, :hidden=&gt; true)
