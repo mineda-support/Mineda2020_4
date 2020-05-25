@@ -30,9 +30,10 @@ parea = input(18, 0)
 narea = input(19, 0)
 pad = input(20, 0)
 
-new_diff = diff - tin
+new_parea = parea - tin
+new_narea = narea - tin
 
-new_diff.output(3, 0) 
+diff.output(3, 0) 
 tin.output(5, 0)
 cnt.output(7, 0)
 ml1.output(8, 0)
@@ -42,8 +43,8 @@ frame.output(14, 0)
 res.output(15, 0)
 cap.output(16, 0)
 dio.output(17, 0)
-parea.output(18, 0)
-narea.output(19, 0)
+new_parea.output(18, 0)
+new_narea.output(19, 0)
 pad.output(20, 0)
 
 puts source.path.sub('.gds', '_converted.gds') + ' created'</text>
