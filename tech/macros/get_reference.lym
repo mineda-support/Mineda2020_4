@@ -14,7 +14,7 @@
  <menu-path/>
  <interpreter>ruby</interpreter>
  <dsl-interpreter-name/>
- <text># Mineda2020_4 lvs preprocessor v0.21 June 29, 2020 copy left by S. Moriyama (Anagix Corporation)
+ <text># Mineda2020_4 lvs preprocessor v0.22 Oct. 15, 2020 copy left by S. Moriyama (Anagix Corporation)
 require 'fileutils'
 require 'yaml'
 def get_params netlist
@@ -61,13 +61,12 @@ module MyMacro
   c = File.open(File.join('lvs_work', File.basename(netlist))+'.txt', 'w:UTF-8')
   File.open(netlist, 'r:Windows-1252').read.encode('UTF-8', invalid: :replace).each_line{|l|
     l.gsub! 00.chr, ''
+    l.tr! "@%-", "$$_"
     c.puts l
     if l=~ /(\S+)@or1_stdcells_v1/
       cells &lt;&lt; $1 unless cells.include? $1
       l.sub! '@', '$'
-    elsif l =~ /[@%-]/
-      l.tr! "@%-", "$$_"
-    elsif l =~ /^ *\.inc/
+ elsif l =~ /^ *\.inc/ || l =~ /^ *([iI]|[vV])/
       l.sub! /^/, '*'
     elsif l=~/^(([mM]\S+) *\S+ *\S+ *\S+ *\S+ *(\S+)) *(.*)/
       body = $1
